@@ -499,7 +499,8 @@ function setFuel(type, btn) {
 //  MAIN SEARCH
 // ══════════════════════════════════════════
 async function search() {
-  if (!gs('opinetKey')) {
+  // 로컬 키 없어도 서버 환경변수로 동작 가능 — 그냥 진행
+  if (!gs('opinetKey') && !S.serverHasKey) {
     alert('⚙️ 설정에서 오피넷 API 키를 먼저 입력해주세요.');
     openSettings();
     return;
@@ -869,14 +870,17 @@ if ('serviceWorker' in navigator) {
 // ── Init ──
 loadSettings();
 
-// 처음 실행시 키 없으면 안내
-if (!gs('opinetKey')) {
-  document.getElementById('results').innerHTML = `
+// 서버에 키가 설정됐는지 확인
+fetch('/api/has-key').then(r=>r.json()).then(d=>{
+  S.serverHasKey = d.ok;
+  if (!d.ok && !gs('opinetKey')) {
+    document.getElementById('results').innerHTML = `
     <div class="empty-state">
       <div class="icon">⚙️</div>
       <p>먼저 오른쪽 위 <strong>⚙️ 설정</strong>을 눌러<br>오피넷 API 키를 입력해주세요.</p>
     </div>`;
-}
+  }
+}).catch(()=>{});
 </script>
 </body>
 </html>

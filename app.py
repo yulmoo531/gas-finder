@@ -210,6 +210,11 @@ def index():
     return send_from_directory("static", "index.html")
 
 
+@app.route("/api/has-key")
+def has_key():
+    return jsonify({"ok": bool(os.environ.get("OPINET_KEY", "").strip())})
+
+
 @app.route("/api/stations")
 def get_stations():
     code   = request.args.get("code", "").strip()
@@ -218,6 +223,9 @@ def get_stations():
     radius = int(request.args.get("radius", 3000))
     prodcd = request.args.get("prodcd", "B027")
 
+    # 클라이언트가 키를 안 보내면 서버 환경변수 사용
+    if not code:
+        code = os.environ.get("OPINET_KEY", "")
     if not code:
         return jsonify({"error": "오피넷 API 키가 없습니다."}), 400
 
