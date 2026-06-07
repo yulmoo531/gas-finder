@@ -1,0 +1,19 @@
+{
+  "name": "진짜 최저가 주유소",
+  "short_name": "최저가주유소",
+  "description": "이동 기름값까지 고려한 실질 최저가 주유소 찾기",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1117",
+  "theme_color": "#1f6feb",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
