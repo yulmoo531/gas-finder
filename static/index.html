@@ -400,6 +400,17 @@ input[type=range]::-webkit-slider-thumb {
     </div>
   </div>
 
+  <!-- 주소 검색 -->
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title">주소로 검색 (선택)</div>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="addrInput" placeholder="예) 서울시 강남구 테헤란로 or 현재위치 사용"
+        style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:10px 12px;color:#e6edf3;font-size:14px;"
+        onkeydown="if(event.key==='Enter')searchByAddr()">
+      <button onclick="searchByAddr()" style="background:#238636;border:none;border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;">검색</button>
+    </div>
+  </div>
+
   <!-- 검색 버튼 -->
   <button class="btn-search" id="searchBtn" onclick="search()">
     📍 내 위치에서 최저가 찾기
@@ -498,6 +509,37 @@ function setFuel(type, btn) {
 }
 
 // ══════════════════════════════════════════
+//  주소 검색 (Nominatim)
+// ══════════════════════════════════════════
+async function searchByAddr() {
+  if (!gs('opinetKey') && !S.serverHasKey) {
+    alert('⚙️ 설정에서 오피넷 API 키를 먼저 입력해주세요.');
+    openSettings();
+    return;
+  }
+  const addr = document.getElementById('addrInput').value.trim();
+  if (!addr) { alert('주소를 입력해주세요.'); return; }
+
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('map-container').style.display = 'none';
+  setStatus('<span class="spinner"></span> 주소 검색 중...');
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr + ' 대한민국')}&format=json&limit=1`, {
+      headers: { 'Accept-Language': 'ko' }
+    });
+    const data = await r.json();
+    if (!data.length) { setStatus('❌ 주소를 찾을 수 없습니다. 더 자세히 입력해보세요.'); return; }
+    S.myLat = parseFloat(data[0].lat);
+    S.myLng = parseFloat(data[0].lon);
+    S.addrLabel = data[0].display_name.split(',')[0];
+    setStatus(`📌 "${S.addrLabel}" 기준으로 검색합니다.`);
+    await runSearch();
+  } catch(e) {
+    setStatus('❌ 주소 검색 실패: ' + e.message);
+  }
+}
+
+// ══════════════════════════════════════════
 //  MAIN SEARCH
 // ══════════════════════════════════════════
 async function search() {
@@ -518,7 +560,30 @@ async function search() {
     const pos = await geolocate();
     S.myLat = pos.coords.latitude;
     S.myLng = pos.coords.longitude;
+    S.addrLabel = null;
 
+    await runSearch();
+  } catch (err) {
+    setStatus('❌ ' + err.message);
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function runSearch() {
+  if (!gs('opinetKey') && !S.serverHasKey) {
+    alert('⚙️ 설정에서 오피넷 API 키를 먼저 입력해주세요.');
+    openSettings();
+    return;
+  }
+
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('map-container').style.display = 'none';
+
+  try {
     setStatus('<span class="spinner"></span> 오피넷에서 주유소 조회 중...');
     const stations = await fetchStations();
 
@@ -539,9 +604,8 @@ async function search() {
       ranked = rankStraightLine(stations, eff, fill, refPrice);
     }
 
-    setStatus('');
+    setStatus(S.addrLabel ? `📌 "${S.addrLabel}" 기준 결과` : '');
     renderResults(ranked, refPrice);
-
     renderMap(ranked);
   } catch (err) {
     setStatus('❌ ' + err.message);
